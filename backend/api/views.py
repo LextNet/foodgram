@@ -1,15 +1,3 @@
-from django.contrib.auth import get_user_model
-from django.db.models import (BooleanField, Count, Exists, OuterRef, Prefetch,
-                              Sum, Value)
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django_filters import rest_framework as django_filters
-from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
 from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import CustomPageNumberPagination
 from api.permissions import IsRecipeAuthor
@@ -22,8 +10,19 @@ from api.serializers.users import (AvatarUploadSerializer,
                                    PasswordChangeSerializer,
                                    UserProfileSerializer,
                                    UserRegistrationSerializer)
+from django.contrib.auth import get_user_model
+from django.db.models import (BooleanField, Count, Exists, OuterRef, Prefetch,
+                              Sum, Value)
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django_filters import rest_framework as django_filters
 from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from users.models import Subscribe
 
 User = get_user_model()
@@ -276,7 +275,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     'attachment; filename="shopping_cart.txt"')
                 return response
 
-            text = f'Список покупок для {user.username}:\n\n'
+            text = f'Список покупок для {user.username}: \n\n'
             for item in ingredients:
                 text += (f'- {item['ingredient__name']}: '
                          f'({item['total_amount']}) — '

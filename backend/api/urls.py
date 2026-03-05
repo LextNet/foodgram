@@ -1,10 +1,9 @@
-from django.conf import settings
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter, SimpleRouter
-
 from api.views import (IngredientViewSet, PublicUserViewSet, RecipeViewSet,
                        SubscriptionViewEdit, SubscriptionViewSet, TagViewSet,
                        UserProfileMeView)
+from django.conf import settings
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter, SimpleRouter
 
 app_name = 'api'
 

@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from djoser.serializers import TokenCreateSerializer
 from rest_framework import serializers
-
 from users.constants import MAX_LENGTH_USERNAME
 from users.models import Subscribe
 from users.validators import validate_base64_image, validate_username
