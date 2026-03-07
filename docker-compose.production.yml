@@ -13,7 +13,7 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
   frontend:
-    container_name: foodgram-front
+    container_name: foodgram-frontend
     image: enterinet/foodgram_frontend
     volumes:
       - static:/app/result_build
