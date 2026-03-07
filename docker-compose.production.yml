@@ -12,6 +12,11 @@ services:
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data
+  frontend:
+    container_name: foodgram-front
+    image: enterinet/foodgram_frontend
+    volumes:
+      - static:/app/result_build
   backend:
     container_name: foodgram-backend
     image: enterinet/foodgram_backend
@@ -21,11 +26,7 @@ services:
       - media:/media
     depends_on:
       - db
-  frontend:
-    container_name: foodgram-front
-    image: enterinet/foodgram_frontend
-    volumes:
-      - static:/app/result_build
+      - frontend
   nginx:
     container_name: foodgram-proxy
     image: enterinet/foodgram_gateway
