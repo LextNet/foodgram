@@ -7,10 +7,9 @@ python manage.py migrate --noinput
 # Собираем статику
 python manage.py collectstatic --noinput --clear --settings=foodgram_backend.settings
 
-# Создаём целевую директорию в volume, если её нет
-mkdir -p /backend_static
+mkdir -p /backend_static/static
 
 # Копируем статические файлы в volume
-cp -r /app/collected_static/. /backend_static/
+cp -r /app/collected_static/. /backend_static/static
 
 exec "$@"
