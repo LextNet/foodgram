@@ -14,8 +14,8 @@ class CustomUser(AbstractUser):
     last_name = models.CharField('Фамилия', max_length=MAX_LENGTH_FIO)
     email = models.EmailField('Адрес электронной почты',
                               max_length=MAX_LENGTH_EMAIL, unique=True)
-    avatar = models.ImageField('Аватар', upload_to='users/', null=True,
-                               blank=True, default='users/image.png')
+    avatar = models.ImageField('Аватар', null=True,
+                               blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']

@@ -101,10 +101,10 @@ class Base64AvatarUploadSerializer(serializers.Serializer):
 
         # Создаём ContentFile из декодированных данных
         extension = validation_result['extension']
-        if extension == 'jpg':
-            extension = 'jpeg'
+        # if extension == 'jpg':
+        #     extension = 'jpeg'
 
-        file_name = f'avatar.{extension}'
+        file_name = f'image.{extension}'
         content_file = ContentFile(
             validation_result['decoded_data'],
             name=file_name
