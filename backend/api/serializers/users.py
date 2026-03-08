@@ -101,8 +101,10 @@ class Base64AvatarUploadSerializer(serializers.Serializer):
 
         # Создаём ContentFile из декодированных данных
         extension = validation_result['extension']
-        # if extension == 'jpg':
-        #     extension = 'jpeg'
+        if extension != 'jpg' or extension != 'png':
+            raise serializers.ValidationError(
+                {'current image have is incorrect format'}
+            )
 
         file_name = f'image.{extension}'
         content_file = ContentFile(

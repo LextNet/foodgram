@@ -65,7 +65,7 @@ def validate_base64_image(value):
     if len(decoded_file) > max_size:
         raise ValidationError('Image too large. Max file size is 5 MB.')
 
-    file_name = f'avatar.{extension}'
+    file_name = f'image.{extension}'
     return {
         'decoded_data': decoded_file,
         'file_name': file_name
