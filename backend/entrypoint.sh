@@ -12,4 +12,7 @@ mkdir -p /backend_static/static
 # Копируем статические файлы в volume
 cp -r /app/collected_static/. /backend_static/static
 
+# Загружаем данные из csv файла
+python manage.py import_csv
+
 exec "$@"
