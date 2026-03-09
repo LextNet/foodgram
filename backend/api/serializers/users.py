@@ -15,7 +15,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=MAX_LENGTH_USERNAME,
                                      validators=[validate_username])
     is_subscribed = serializers.BooleanField(read_only=True, default=False)
-    avatar = serializers.URLField(allow_null=True)
+    # avatar = serializers.CharField(allow_null=True)
+    avatar = serializers.ImageField(use_url=True, allow_null=True)
 
     class Meta:
         model = User
@@ -23,6 +24,14 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'email', 'username', 'first_name', 'last_name',
             'is_subscribed', 'avatar'
         ]
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        avatar_url = ret.get('avatar')
+        if avatar_url and self.context.get('request'):
+            ret['avatar'] = self.context['request'
+                                         ].build_absolute_uri(avatar_url)
+        return ret
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -82,39 +91,39 @@ class PasswordChangeSerializer(serializers.Serializer):
         return user
 
 
-class Base64AvatarUploadSerializer(serializers.Serializer):
-    avatar = serializers.CharField(
-        required=True, validators=[validate_base64_image],
-        help_text='Base64‑encoded image string with data URL prefix'
-    )
+# class Base64AvatarUploadSerializer(serializers.Serializer):
+#     avatar = serializers.CharField(
+#         required=True, validators=[validate_base64_image],
+#         help_text='Base64‑encoded image string with data URL prefix'
+#     )
 
-    def to_internal_value(self, data):
-        """
-        Переопределяем метод для преобразования Base64 в файл.
-        """
-        # Сначала стандартная валидация
-        validated_data = super().to_internal_value(data)
+#     def to_internal_value(self, data):
+#         """
+#         Переопределяем метод для преобразования Base64 в файл.
+#         """
+#         # Сначала стандартная валидация
+#         validated_data = super().to_internal_value(data)
 
-        # Получаем результат валидации
-        avatar_value = data.get('avatar')
-        validation_result = validate_base64_image(avatar_value)
+#         # Получаем результат валидации
+#         avatar_value = data.get('avatar')
+#         validation_result = validate_base64_image(avatar_value)
 
-        # Создаём ContentFile из декодированных данных
-        extension = validation_result['extension']
-        if extension != 'jpg' or extension != 'png':
-            raise serializers.ValidationError(
-                {'current image have is incorrect format'}
-            )
+#         # Создаём ContentFile из декодированных данных
+#         extension = validation_result['extension']
+#         if extension != 'jpg' or extension != 'png':
+#             raise serializers.ValidationError(
+#                 {'current image have is incorrect format'}
+#             )
 
-        file_name = f'image.{extension}'
-        content_file = ContentFile(
-            validation_result['decoded_data'],
-            name=file_name
-        )
+#         file_name = f'image.{extension}'
+#         content_file = ContentFile(
+#             validation_result['decoded_data'],
+#             name=file_name
+#         )
 
-        # Заменяем строку Base64 на ContentFile
-        validated_data['avatar'] = content_file
-        return validated_data
+#         # Заменяем строку Base64 на ContentFile
+#         validated_data['avatar'] = content_file
+#         return validated_data
 
 
 class AvatarUploadSerializer(serializers.Serializer):
@@ -130,9 +139,10 @@ class AvatarUploadSerializer(serializers.Serializer):
             # Convert decoded bytes to ContentFile
             return ContentFile(result['decoded_data'],
                                name=result['file_name'])
-        except Exception as e:
-            print(f"Validation error: {e}")
-            raise
+        except Exception:
+            raise serializers.ValidationError(
+                {'current image have is incorrect format'}
+            )
 
 
 class CustomTokenCreateSerializer(TokenCreateSerializer):

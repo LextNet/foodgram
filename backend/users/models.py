@@ -1,8 +1,17 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from users.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_FIO,
                              MAX_LENGTH_USERNAME)
 from users.validators import validate_username
+
+
+class OverwriteStorage(FileSystemStorage):
+    def get_available_name(self, name, max_length=None):
+        # Удаляем суффикс, если файл уже существует
+        if self.exists(name):
+            self.delete(name)
+        return name
 
 
 class CustomUser(AbstractUser):
@@ -14,7 +23,8 @@ class CustomUser(AbstractUser):
     last_name = models.CharField('Фамилия', max_length=MAX_LENGTH_FIO)
     email = models.EmailField('Адрес электронной почты',
                               max_length=MAX_LENGTH_EMAIL, unique=True)
-    avatar = models.ImageField('Аватар', null=True, blank=True)
+    avatar = models.ImageField('Аватар', upload_to='users/', null=True,
+                               blank=True, storage=OverwriteStorage())
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']

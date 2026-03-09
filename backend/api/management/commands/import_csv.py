@@ -5,7 +5,7 @@ import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from recipes.models import Ingredient
+from recipes.models import Ingredient, Tag
 
 
 class Command(BaseCommand):
@@ -30,8 +30,8 @@ class Command(BaseCommand):
 
         try:
             with transaction.atomic():
-                print(csv_path)
                 self.import_ingredients(csv_path)
+                self.import_tags(csv_path)
 
             self.stdout.write(
                 self.style.SUCCESS('Successfully imported all CSV data!')
@@ -69,4 +69,33 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(f'Imported {count} ingredients')
+        )
+
+    def import_tags(self, csv_path):
+        """Импортирует тэги из файла tags.csv"""
+        file_path = os.path.join(csv_path, 'tags.csv')
+        if not os.path.exists(file_path):
+            self.stdout.write(
+                self.style.WARNING(f'File {file_path} not found, skipping...')
+            )
+            return
+
+        self.stdout.write('Importing tags...')
+        count = 0
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                tag, created = Tag.objects.get_or_create(
+                    id=int(row['id']),
+                    defaults={
+                        'name': row['name'],
+                        'slug': row['slug'],
+                    }
+                )
+                if created:
+                    count += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(f'Imported {count} tags')
         )
