@@ -26,7 +26,6 @@ services:
       - media:/media
     depends_on:
       - db
-      - frontend
   nginx:
     container_name: foodgram-proxy
     image: enterinet/foodgram_gateway
@@ -35,3 +34,6 @@ services:
     volumes:
       - static:/static/
       - media:/media/
+    depends_on:
+      - frontend
+      - backend
