@@ -287,9 +287,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
             text = f'Список покупок для {user.username}: \n\n'
             for item in ingredients:
-                text += (f'- {item['ingredient__name']}: '
-                         f'({item['total_amount']}) — '
-                         f'{item['ingredient__measurement_unit']}\n')
+                text += '- {}: ({}) — {}\n'.format(
+                    item['ingredient__name'],
+                    item['total_amount'],
+                    item['ingredient__measurement_unit']
+                )
 
             response = HttpResponse(text, content_type='text/plain;'
                                     ' charset=utf-8')
