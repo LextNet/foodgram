@@ -28,9 +28,9 @@ def validate_username(value):
     if invalid_chars:
         unique_invalid = sorted(set(invalid_chars))
         raise ValidationError(
-            f'''Username содержит недопустимые символы:
-            {",".join(unique_invalid)}. Разрешены: буквы, цифры, @, .,
-             +, -, _.''',
+            'Username содержит недопустимые символы: '
+            f'{",".join(unique_invalid)}. '
+            'Разрешены: буквы, цифры, @, ., +, -, _.',
             code='invalid_characters'
         )
 
