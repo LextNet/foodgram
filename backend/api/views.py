@@ -5,14 +5,11 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django_filters import rest_framework as django_filters
-from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, ShortLink, Tag)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from users.models import Subscribe
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import CustomPageNumberPagination
@@ -27,6 +24,9 @@ from api.serializers.users import (AvatarUploadSerializer,
                                    UserProfileSerializer,
                                    UserRegistrationSerializer)
 from api.utils import generate_short_code_from_id
+from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, ShortLink, Tag)
+from users.models import Subscribe
 
 User = get_user_model()
 

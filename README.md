@@ -2,3 +2,4 @@
 
 По адресу http://localhost изучите фронтенд веб-приложения, а по адресу http://localhost/api/docs/ — спецификацию API.
 
+Адрес сервера на котором запущен foodgram: https://foodgram-final.sytes.net
