@@ -1,7 +1,9 @@
 from django.contrib.auth import get_user_model
 from django.db import models
+
 from recipes.constants import (MAX_LENGTH_INGREDIENT, MAX_LENGTH_MEASURE,
-                               MAX_LENGTH_RECIPE, MAX_LENGTH_TAG)
+                               MAX_LENGTH_RECIPE, MAX_LENGTH_SHORT_URL,
+                               MAX_LENGTH_TAG, MAX_LENGTH_URL)
 
 User = get_user_model()
 
@@ -127,3 +129,8 @@ class ShoppingCart(models.Model):
 
     def __str__(self):
         return (f'Список покупок {self.user.username}')
+
+
+class ShortLink(models.Model):
+    original_url = models.URLField(max_length=MAX_LENGTH_URL)
+    short_code = models.CharField(max_length=MAX_LENGTH_SHORT_URL)

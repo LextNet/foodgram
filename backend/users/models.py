@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.core.files.storage import FileSystemStorage
 from django.db import models
+
 from users.constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_FIO,
                              MAX_LENGTH_USERNAME)
 from users.validators import validate_username

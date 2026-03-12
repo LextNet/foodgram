@@ -1,9 +1,11 @@
-from api.views import (IngredientViewSet, PublicUserViewSet, RecipeViewSet,
-                       SubscriptionViewEdit, SubscriptionViewSet, TagViewSet,
-                       UserProfileMeView)
 from django.conf import settings
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
+
+from api.views import (IngredientViewSet, PublicUserViewSet, RecipeViewSet,
+                       SubscriptionViewEdit, SubscriptionViewSet, TagViewSet,
+                       UserProfileMeView, redirect_short_link)
+
 
 app_name = 'api'
 
@@ -26,5 +28,7 @@ urlpatterns = [
          name='user-subscribe'),
     path('users/subscriptions/', SubscriptionViewSet.as_view({'get': 'list'}),
          name='subscriptions-list'),
+    path('s/<str:short_code>/', redirect_short_link,
+         name='redirect_short_link'),
     path('', include(router.urls)),
 ]

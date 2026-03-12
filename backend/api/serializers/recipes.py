@@ -1,12 +1,14 @@
 import base64
 
-from api.serializers.users import UserProfileSerializer
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from rest_framework import serializers
+
+from api.serializers.users import UserProfileSerializer
 from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
-from rest_framework import serializers
 from users.models import Subscribe
+
 
 User = get_user_model()
 
@@ -91,9 +93,9 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         many=True
     )
     image = Base64ImageField(use_url=True)
-    is_favorited = serializers.BooleanField(read_only=True, default=True)
+    is_favorited = serializers.BooleanField(read_only=True, default=False)
     is_in_shopping_cart = serializers.BooleanField(read_only=True,
-                                                   default=True)
+                                                   default=False)
 
     class Meta:
         model = Recipe

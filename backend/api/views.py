@@ -1,3 +1,19 @@
+from django.contrib.auth import get_user_model
+from django.db.models import (BooleanField, Count, Exists, OuterRef, Prefetch,
+                              Sum, Value)
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django_filters import rest_framework as django_filters
+from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, ShortLink, Tag)
+from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from users.models import Subscribe
+
 from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import CustomPageNumberPagination
 from api.permissions import IsRecipeAuthor
@@ -10,20 +26,7 @@ from api.serializers.users import (AvatarUploadSerializer,
                                    PasswordChangeSerializer,
                                    UserProfileSerializer,
                                    UserRegistrationSerializer)
-from django.contrib.auth import get_user_model
-from django.db.models import (BooleanField, Count, Exists, OuterRef, Prefetch,
-                              Sum, Value)
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from django_filters import rest_framework as django_filters
-from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, Tag)
-from rest_framework import mixins, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from users.models import Subscribe
+from api.utils import generate_short_code_from_id
 
 User = get_user_model()
 
@@ -165,8 +168,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = RecipeFilter
     pagination_class = CustomPageNumberPagination
     ordering_fields = ['id', 'name']
-    # ordering = ['-id']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    ordering = ['-created_at']
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'get_short_link',
@@ -209,11 +212,23 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['get'], url_path='get-link',
-            permission_classes=[AllowAny])
+    @action(detail=True, methods=['get'], url_path='get-link')
     def get_short_link(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, id=pk)
-        short_link = request.build_absolute_uri(f"/s/{recipe.pk}/")
+        recipe_detail_url = reverse('api:recipes-detail', kwargs={'pk': pk})
+        result_detail_url = recipe_detail_url.replace("api/", "", 1)
+        full_url = request.build_absolute_uri(result_detail_url)
+        short_code = generate_short_code_from_id(pk)
+
+        short_link, created = ShortLink.objects.get_or_create(
+            original_url=full_url,
+            short_code=short_code
+        )
+        if not created:
+            short_code = short_link.short_code
+        host = request.get_host()
+        # protocol = 'https' if request.is_secure() else 'http'
+        # short_link = f"{protocol}://{host}/api/s/{short_code}/"
+        short_link = f'{host}/api/s/{short_code}/'
         return Response({"short-link": short_link}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post', 'delete'],
@@ -233,14 +248,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     {'error': 'Рецепт уже в избранном'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
             Favourite.objects.create(user=user, recipe=recipe)
-
             serializer = RecipeMinifiedSerializer(recipe,
                                                   context={'request': request})
             return Response(serializer.data,
                             status=status.HTTP_201_CREATED)
-
         elif request.method == 'DELETE':
             deleted_count, _ = Favourite.objects.filter(user=user,
                                                         recipe=recipe).delete()
@@ -249,7 +261,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     {'error': 'Рецепт не в избранном'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
             return Response(
                 {'succes': 'Рецепт удален из избранного'},
                 status=status.HTTP_204_NO_CONTENT
@@ -259,7 +270,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         user = request.user
-
         try:
             ingredients = RecipeIngredient.objects.filter(
                 recipe__shoppingcart__user=user
@@ -363,16 +373,13 @@ class SubscriptionViewEdit(APIView):
                 {'error': 'Cannot subscribe to yourself'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         if Subscribe.objects.filter(author=author, subscriber=subscriber
                                     ).exists():
             return Response(
                 {'error': 'Already subscribed to this user'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         Subscribe.objects.create(author=author, subscriber=subscriber)
-
         recipes_limit = request.query_params.get('recipes_limit')
         try:
             recipes_limit = int(recipes_limit) if recipes_limit else None
@@ -417,3 +424,8 @@ class SubscriptionViewEdit(APIView):
             )
         Subscribe.objects.filter(author=author, subscriber=subscriber).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def redirect_short_link(request, short_code):
+    short_link = get_object_or_404(ShortLink, short_code=short_code)
+    return HttpResponseRedirect(short_link.original_url)

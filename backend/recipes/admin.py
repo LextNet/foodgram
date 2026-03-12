@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
 
 admin.site.empty_value_display = 'Не задано'
