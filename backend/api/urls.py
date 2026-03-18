@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from api.views import (IngredientViewSet, PublicUserViewSet, RecipeViewSet,
                        SubscriptionViewEdit, SubscriptionViewSet, TagViewSet,
-                       UserProfileMeView, redirect_short_link)
+                       redirect_short_link)
 
 
 app_name = 'api'
@@ -22,8 +22,6 @@ router.register('recipes', RecipeViewSet, basename='recipes')
 urlpatterns = [
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.authtoken')),
-    path('users/me/', UserProfileMeView.as_view(), name='user-me'),
-    path('users/me/avatar/', UserProfileMeView.as_view(), name='user-avatar'),
     path('users/<int:pk>/subscribe/', SubscriptionViewEdit.as_view(),
          name='user-subscribe'),
     path('users/subscriptions/', SubscriptionViewSet.as_view({'get': 'list'}),

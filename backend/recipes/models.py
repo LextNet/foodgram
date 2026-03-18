@@ -33,6 +33,12 @@ class Ingredient(models.Model):
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
         ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_Ingredient_unit'
+            ),
+        ]
 
     def __str__(self):
         return f'{self.name} ({self.measurement_unit})'
@@ -59,28 +65,64 @@ class RecipeIngredient(models.Model):
                 f'{self.ingredient.measurement_unit}')
 
 
-class Favourite(models.Model):
+class BaseUserRecipeModel(models.Model):
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             related_name='favorites',
-                             verbose_name='Пользователь')
+                             related_name='%(class)s',
+                             verbose_name='Пользователь',
+                             db_index=True)
     recipe = models.ForeignKey('Recipe',
                                on_delete=models.CASCADE,
-                               related_name='favorited_by',
-                               verbose_name='Рецепт')
+                               related_name='%(class)s_by',
+                               verbose_name='Рецепт',
+                               db_index=True)
 
-    class Meta:
+    class Meta():
+        abstract = True
+
+
+class Favorite(BaseUserRecipeModel):
+
+    class Meta():
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранные рецепты'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_user_recipe'
-            ),
+                name='unique_favorite_user_recipe'
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=['user', 'recipe'],
+                name='idx_favorite_user_recipe'
+            )
         ]
 
     def __str__(self):
         return (f'{self.user.username} → {self.recipe.name}')
+
+
+class ShoppingCart(BaseUserRecipeModel):
+
+    class Meta():
+        verbose_name = 'Покупка'
+        verbose_name_plural = 'Список покупок'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_shoppingcart_user_recipe'
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=['user', 'recipe'],
+                name='idx_shoppingcart_user_recipe'
+            )
+        ]
+
+    def __str__(self):
+        return (f'Список покупок {self.user.username}')
 
 
 class Recipe(models.Model):
@@ -104,31 +146,15 @@ class Recipe(models.Model):
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
-
-    def __str__(self):
-        return self.name
-
-
-class ShoppingCart(models.Model):
-    user = models.ForeignKey(User,
-                             on_delete=models.CASCADE,
-                             verbose_name='Пользователь',
-                             db_index=True)
-    recipe = models.ForeignKey(Recipe,
-                               on_delete=models.CASCADE,
-                               verbose_name='Рецепт',
-                               db_index=True)
-
-    class Meta:
-        verbose_name = 'Покупка'
-        verbose_name_plural = 'Список покупок'
-        indexes = [
-            models.Index(fields=['user', 'recipe'],
-                         name='idx_shoppingcart_user_recipe')
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(cooking_time__gt=0),
+                name="cooking_time_positive",
+            ),
         ]
 
     def __str__(self):
-        return (f'Список покупок {self.user.username}')
+        return self.name
 
 
 class ShortLink(models.Model):

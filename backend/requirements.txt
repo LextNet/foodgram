@@ -10,3 +10,4 @@ python-dotenv==1.2.1
 pyyaml==6.0.3
 gunicorn==23.0.0
 django-debug-toolbar==4.3.0
+drf-extra-fields==3.7.0

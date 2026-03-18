@@ -15,7 +15,7 @@ class OverwriteStorage(FileSystemStorage):
         return name
 
 
-class CustomUser(AbstractUser):
+class UserProfile(AbstractUser):
     """Переопределённая модель пользователя."""
     username = models.CharField('Пользователь', max_length=MAX_LENGTH_USERNAME,
                                 unique=True,
@@ -41,11 +41,11 @@ class CustomUser(AbstractUser):
 
 class Subscribe(models.Model):
     """Подписка одного пользователя на другого."""
-    author = models.ForeignKey(CustomUser,
+    author = models.ForeignKey(UserProfile,
                                on_delete=models.CASCADE,
                                related_name='subscribers', db_index=True,
                                verbose_name='Автор')
-    subscriber = models.ForeignKey(CustomUser,
+    subscriber = models.ForeignKey(UserProfile,
                                    on_delete=models.CASCADE,
                                    related_name='subscriptions', db_index=True,
                                    verbose_name='Подписчик')

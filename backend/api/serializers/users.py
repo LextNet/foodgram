@@ -1,13 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
-from django.core.files.base import ContentFile
-from djoser.serializers import TokenCreateSerializer
 from rest_framework import serializers
+from drf_extra_fields.fields import Base64ImageField
 
 from users.constants import MAX_LENGTH_USERNAME
 from users.models import Subscribe
-from users.validators import validate_base64_image, validate_username
+from users.validators import validate_username
 
 User = get_user_model()
 
@@ -15,7 +12,7 @@ User = get_user_model()
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=MAX_LENGTH_USERNAME,
                                      validators=[validate_username])
-    is_subscribed = serializers.BooleanField(read_only=True, default=False)
+    is_subscribed = serializers.SerializerMethodField()
     avatar = serializers.ImageField(use_url=True, allow_null=True)
 
     class Meta:
@@ -25,6 +22,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_subscribed', 'avatar'
         ]
 
+    def get_is_subscribed(self, instance):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            result = Subscribe.objects.filter(
+                subscriber=request.user,
+                author=instance
+            ).exists()
+        else:
+            result = False
+        return result
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         request = self.context.get('request')
@@ -32,110 +40,27 @@ class UserProfileSerializer(serializers.ModelSerializer):
         if request and avatar_url:
             ret['avatar'] = self.context['request'
                                          ].build_absolute_uri(avatar_url)
-        if request and request.user.is_authenticated:
-            ret['is_subscribed'] = Subscribe.objects.filter(
-                subscriber=request.user,
-                author=instance
-            ).exists()
-        else:
-            ret['is_subscribed'] = False
         return ret
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True,
-                                     style={'input_type': 'password'},
-                                     validators=[validate_password])
-    username = serializers.CharField(max_length=MAX_LENGTH_USERNAME,
-                                     validators=[validate_username])
+class AvatarUploadSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField(
+        required=True,
+        use_url=True  # возвращает URL изображения при сериализации
+    )
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name',
-                  'password']
+        fields = ['avatar']
 
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError('Email is already registered.')
-        return value
-
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError('Username is already taken.')
-        return value
-
-    def create(self, validated_data):
-        password = validated_data.pop('password')
-        user = super().create(validated_data)
-        user.set_password(password)
-        user.save()
-        return user
-
-
-class PasswordChangeSerializer(serializers.Serializer):
-    current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(write_only=True)
-
-    def validate(self, data):
-        user = self.context['request'].user
-        if not user.check_password(data['current_password']):
-            raise serializers.ValidationError(
-                {'current_password': 'Current password is incorrect.'}
-            )
-
-        new_password = data['new_password']
-
-        try:
-            validate_password(new_password, user)
-        except ValidationError as e:
-            raise serializers.ValidationError(f'new_password: {e.messages}')
-        return data
-
-    def save(self):
-        password = self.validated_data['new_password']
-        user = self.context['request'].user
-        user.set_password(password)
-        user.save()
-        return user
-
-
-class AvatarUploadSerializer(serializers.Serializer):
-    avatar = serializers.CharField(
-        required=True,
-        help_text='Base64‑encoded image string with data URL prefix'
-    )
-
-    def validate_avatar(self, value):
-        # Run the custom validation
-        try:
-            result = validate_base64_image(value)
-            # Convert decoded bytes to ContentFile
-            return ContentFile(result['decoded_data'],
-                               name=result['file_name'])
-        except Exception:
-            raise serializers.ValidationError(
-                {'current image have is incorrect format'}
-            )
-
-
-class CustomTokenCreateSerializer(TokenCreateSerializer):
-    email = serializers.EmailField(write_only=True)
-    password = serializers.CharField(write_only=True,
-                                     style={'input_type': 'password'})
-
-    def validate(self, attrs):
-        email = attrs.get('email')
-        if not email:
-            raise serializers.ValidationError(
-                {'email': 'Это поле обязательно.'})
-        # Передаем email и password в базовый валидатор
-        attrs['username'] = email  # Djoser ожидает username, подменяем
-        return super().validate(attrs)
-
-    def create(self, validated_data):
-        # Удаляем username из ответа (чтобы не было в выводе)
-        validated_data.pop('username', None)
-        return validated_data
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        request = self.context.get('request')
+        avatar_url = ret.get('avatar')
+        if request and avatar_url:
+            ret['avatar'] = self.context['request'
+                                         ].build_absolute_uri(avatar_url)
+        return ret
 
 
 class SuscribeSerializer(serializers.ModelSerializer):

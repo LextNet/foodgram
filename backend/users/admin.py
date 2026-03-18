@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-
-from users.models import CustomUser, Subscribe
+from users.models import Subscribe, UserProfile
 
 admin.site.empty_value_display = 'Не задано'
 
@@ -20,5 +19,5 @@ class SubscribeAdmin(admin.ModelAdmin):
     date_hierarchy = 'created'
 
 
-admin.site.register(CustomUser, FoodGramUserAdmin)
+admin.site.register(UserProfile, FoodGramUserAdmin)
 admin.site.register(Subscribe, SubscribeAdmin)

@@ -100,7 +100,7 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = "users.CustomUser"
+AUTH_USER_MODEL = "users.UserProfile"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -167,7 +167,10 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': False,
     'SEND_ACTIVATION_EMAIL': False,
     'TOKEN_MODEL': 'rest_framework.authtoken.models.Token',
-    'SERIALIZERS': {
-        'token_create': 'api.serializers.users.CustomTokenCreateSerializer',
+    'PERMISSIONS': {
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user': ['rest_framework.permissions.AllowAny'],
+        'user_create': ['rest_framework.permissions.AllowAny'],
+        'set_password': ['rest_framework.permissions.IsAuthenticated']
     },
 }

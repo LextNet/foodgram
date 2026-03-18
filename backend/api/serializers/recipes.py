@@ -1,11 +1,10 @@
-import base64
-
 from django.contrib.auth import get_user_model
-from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from api.serializers.users import UserProfileSerializer
-from recipes.models import (Favourite, Ingredient, Recipe, RecipeIngredient,
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                             ShoppingCart, Tag)
 from users.models import Subscribe
 
@@ -42,26 +41,6 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         model = RecipeIngredient
 
 
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        # Если это base64-строка с префиксом
-        if isinstance(data, str) and data.startswith('data:image'):
-            try:
-                # Разделяем формат и данные
-                format, imgstr = data.split(';base64,')
-                ext = format.split('/')[-1]
-                # Декодируем base64
-                decoded_file = base64.b64decode(imgstr)
-                # Создаём ContentFile с именем
-                data = ContentFile(decoded_file, name=f'temp.{ext}')
-            except Exception as e:
-                raise serializers.ValidationError(
-                    f"Некорректный формат base64-изображения: {str(e)}"
-                )
-        # Для обычных файлов передаём дальше
-        return super().to_internal_value(data)
-
-
 class RecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     author = UserProfileSerializer(read_only=True)
@@ -70,9 +49,8 @@ class RecipeSerializer(serializers.ModelSerializer):
         many=True, read_only=True
     )
     image = Base64ImageField(use_url=True)
-    is_favorited = serializers.BooleanField(read_only=True, default=False)
-    is_in_shopping_cart = serializers.BooleanField(read_only=True,
-                                                   default=False)
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -80,6 +58,18 @@ class RecipeSerializer(serializers.ModelSerializer):
             'id', 'tags', 'author', 'ingredients', 'name', 'image',
             'text', 'cooking_time', 'is_in_shopping_cart', 'is_favorited'
         ]
+
+    def get_is_favorited(self, obj):
+        user = self.context.get('request').user
+        if not user.is_authenticated:
+            return False
+        return Favorite.objects.filter(user=user, recipe=obj).exists()
+
+    def get_is_in_shopping_cart(self, obj):
+        user = self.context.get('request').user
+        if not user.is_authenticated:
+            return False
+        return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
 
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
@@ -93,9 +83,8 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         many=True
     )
     image = Base64ImageField(use_url=True)
-    is_favorited = serializers.BooleanField(read_only=True, default=False)
-    is_in_shopping_cart = serializers.BooleanField(read_only=True,
-                                                   default=False)
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
@@ -103,6 +92,18 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             'id', 'tags', 'ingredients', 'name', 'image', 'text',
             'cooking_time', 'author', 'is_in_shopping_cart', 'is_favorited'
         ]
+
+    def get_is_favorited(self, obj):
+        user = self.context.get('request').user
+        if not user.is_authenticated:
+            return False
+        return Favorite.objects.filter(user=user, recipe=obj).exists()
+
+    def get_is_in_shopping_cart(self, obj):
+        user = self.context.get('request').user
+        if not user.is_authenticated:
+            return False
+        return ShoppingCart.objects.filter(user=user, recipe=obj).exists()
 
     def validate_ingredients(self, value):
         if not value:
@@ -231,26 +232,99 @@ class RecipeMinifiedSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class FavouriteSerializer(serializers.ModelSerializer):
+class FavoriteValidationMixin:
+    def _get_user(self):
+        return self.context['request'].user
+
+    def _get_recipe(self):
+        recipe_id = self.context['view'].kwargs.get('pk')
+        return get_object_or_404(Recipe, pk=recipe_id)
+
+    def _check_recipe_in_favorite(self, should_exist=True):
+        user = self._get_user()
+        recipe = self._get_recipe()
+        recipe_exists = Favorite.objects.filter(user=user, recipe=recipe
+                                                ).exists()
+        if not should_exist and recipe_exists:
+            raise serializers.ValidationError(
+                {'error': 'Рецепт уже в избранном'}
+            )
+        elif should_exist and not recipe_exists:
+            raise serializers.ValidationError(
+                {'error': 'Рецепт не в избранном'}
+            )
+        return {'user': user, 'recipe': recipe}
+
+
+class FavoriteSerializer(FavoriteValidationMixin,
+                         serializers.ModelSerializer):
 
     class Meta:
-        model = Favourite
+        model = Favorite
         fields = ('id', 'recipe', 'user')
 
+    def validate(self, data):
+        self._check_recipe_in_favorite(should_exist=False)
+        return data
 
-class ShoppingCartSerializer(serializers.ModelSerializer):
+
+class FavoriteDeleteSerializer(FavoriteValidationMixin,
+                               serializers.Serializer):
+    def validate(self, data):
+        self._check_recipe_in_favorite(should_exist=True)
+        return data
+
+
+class ShoppingCartValidationMixin:
+    def _get_user(self):
+        return self.context['request'].user
+
+    def _get_recipe(self):
+        recipe_id = self.context['view'].kwargs.get('pk')
+        return get_object_or_404(Recipe, pk=recipe_id)
+
+    def _check_recipe_in_cart(self, should_exist=True):
+        user = self._get_user()
+        recipe = self._get_recipe()
+        recipe_exists = ShoppingCart.objects.filter(user=user, recipe=recipe
+                                                    ).exists()
+        if not should_exist and recipe_exists:
+            raise serializers.ValidationError(
+                {'error': 'Рецепт уже в списке покупок'}
+            )
+        elif should_exist and not recipe_exists:
+            raise serializers.ValidationError(
+                {'error': 'Рецепт не найден в списке покупок'}
+            )
+        return {'user': user, 'recipe': recipe}
+
+
+class ShoppingCartSerializer(ShoppingCartValidationMixin,
+                             serializers.ModelSerializer):
 
     class Meta:
         model = ShoppingCart
-        fields = ('id', 'user', 'recipe')
+        fields = ('id', 'recipe', 'user')
+
+    def validate(self, data):
+        # Проверяем что рецепта НЕТ в корзине (для создания)
+        self._check_recipe_in_cart(should_exist=False)
+        return data
+
+
+class ShoppingCartDeleteSerializer(ShoppingCartValidationMixin,
+                                   serializers.Serializer):
+    def validate(self, data):
+        # Проверяем что рецепт ЕСТЬ в корзине (для удаления)
+        self._check_recipe_in_cart(should_exist=True)
+        return data
 
 
 class SubscribedUserSerializer(serializers.ModelSerializer):
 
     is_subscribed = serializers.BooleanField(read_only=True)
     avatar = serializers.ImageField(read_only=True)
-    recipes = RecipeMinifiedSerializer(source='limited_recipes',
-                                       many=True, read_only=True)
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -259,3 +333,69 @@ class SubscribedUserSerializer(serializers.ModelSerializer):
             'email', 'id', 'username', 'first_name', 'last_name',
             'is_subscribed', 'avatar', 'recipes', 'recipes_count'
         ]
+
+    def get_recipes(self, obj):
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit')
+        try:
+            recipes_limit = int(recipes_limit) if recipes_limit else None
+        except (ValueError, TypeError):
+            recipes_limit = None
+        all_recipes = obj.recipes.order_by('-id')
+        if recipes_limit:
+            all_recipes = all_recipes[:recipes_limit]
+        serializer = RecipeMinifiedSerializer(
+            all_recipes,
+            many=True,
+            context={'request': self.context['request']}
+        )
+        return serializer.data
+
+
+class SubscriptionActionSerializer(serializers.Serializer):
+
+    def validate(self, data):
+        request = self.context['request']
+        author_id = self.context['view'].kwargs.get('pk')
+        author = get_object_or_404(User, pk=author_id)
+        subscriber = request.user
+
+        if author == subscriber:
+            raise serializers.ValidationError(
+                {'error': 'Cannot subscribe to yourself'},
+                code='self_subscription'
+            )
+
+        subscription_exists = Subscribe.objects.filter(
+            author=author, subscriber=subscriber
+        ).exists()
+
+        if self.context['request'].method == 'POST':
+            if subscription_exists:
+                raise serializers.ValidationError(
+                    {'error': 'Already subscribed to this user'},
+                    code='already_subscribed'
+                )
+        elif self.context['request'].method == 'DELETE':
+            if not subscription_exists:
+                raise serializers.ValidationError(
+                    {'error': 'Subscription does not exist'},
+                    code='not_subscribed'
+                )
+        self.author = author
+        self.subscriber = subscriber
+        return data
+
+    def create(self, validated_data):
+        Subscribe.objects.create(
+            author=self.author,
+            subscriber=self.subscriber
+        )
+        return self.author
+
+    def destroy(self):
+        Subscribe.objects.filter(
+            author=self.author,
+            subscriber=self.subscriber
+        ).delete()
+        return self.author

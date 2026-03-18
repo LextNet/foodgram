@@ -21,18 +21,14 @@ class RecipeFilter(filters.FilterSet):
         fields = ['is_favorited', 'is_in_shopping_cart', 'author', 'tags']
 
     def filter_is_favorited(self, queryset, name, value):
-        if value and self.request.user.is_authenticated:
-            return queryset.filter(
-                favorited_by__user=self.request.user
-            )
-        return queryset
+        if not value or not self.request.user.is_authenticated:
+            return queryset
+        return queryset.filter(favorite_by__user=self.request.user)
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
-        if value and self.request.user.is_authenticated:
-            return queryset.filter(
-                shoppingcart__user=self.request.user
-            )
-        return queryset
+        if not value or not self.request.user.is_authenticated:
+            return queryset
+        return queryset.filter(shoppingcart_by__user=self.request.user)
 
 
 class IngredientFilter(filters.FilterSet):

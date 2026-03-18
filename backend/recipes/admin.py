@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from recipes.models import Favourite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 
 admin.site.empty_value_display = 'Не задано'
 
@@ -16,11 +16,11 @@ class RecipesAdmin(admin.ModelAdmin):
 
     @admin.display(description='В избранном?', boolean=True)
     def is_favorited(self, obj):
-        return obj.favorited_by.exists()
+        return obj.favorite_by.exists()
 
     @admin.display(description='Количество добавлений в избранное')
     def get_favorites_count(self, obj):
-        return obj.favorited_by.count()
+        return obj.favorite_by.count()
 
 
 class IngredientAdmin(admin.ModelAdmin):
@@ -36,5 +36,5 @@ class TagAdmin(admin.ModelAdmin):
 admin.site.register(Recipe, RecipesAdmin)
 admin.site.register(Ingredient, IngredientAdmin)
 admin.site.register(Tag, TagAdmin)
-admin.site.register(Favourite)
+admin.site.register(Favorite)
 admin.site.register(ShoppingCart)
