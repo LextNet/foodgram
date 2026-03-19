@@ -18,7 +18,7 @@ def validate_username(value):
     validator = UnicodeUsernameValidator()
     validator(value)
 
-    if value.lower() == FORBIDEN_NAME:
+    if value == FORBIDEN_NAME:
         raise ValidationError(
             f'Имя {FORBIDEN_NAME} запрещено для username.',
             code='forbidden_name'

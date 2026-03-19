@@ -5,8 +5,6 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django_filters import rest_framework as django_filters
 from djoser.views import UserViewSet
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                            ShoppingCart, ShortLink, Tag)
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -14,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.filters import IngredientFilter, RecipeFilter
-from api.pagination import CustomPageNumberPagination
+from api.pagination import DefaultPageNumberPagination
 from api.permissions import IsRecipeAuthor
 from api.serializers.recipes import (FavoriteDeleteSerializer,
                                      FavoriteSerializer, IngredientSerializer,
@@ -28,6 +26,8 @@ from api.serializers.recipes import (FavoriteDeleteSerializer,
                                      TagSerializer)
 from api.serializers.users import AvatarUploadSerializer, UserProfileSerializer
 from api.utils import generate_short_code_from_id
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, ShortLink, Tag)
 
 User = get_user_model()
 
@@ -35,19 +35,11 @@ User = get_user_model()
 class PublicUserViewSet(UserViewSet):
     serializer_class = UserProfileSerializer
     http_method_names = ['get', 'post', 'put', 'delete']
-    pagination_class = CustomPageNumberPagination
+    pagination_class = DefaultPageNumberPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
         queryset = User.objects.all()
-
-        request = self.request
-        for obj in queryset:
-            if obj.avatar:
-                obj.avatar = request.build_absolute_uri(obj.avatar.url)
-            else:
-                obj.avatar = None
-
         queryset = queryset.exclude(is_superuser=True)
         return queryset
 
@@ -146,7 +138,7 @@ class RecipeViewSet(RecipeActionMixin, viewsets.ModelViewSet):
     permission_classes = [IsRecipeAuthor]
     filter_backends = [django_filters.DjangoFilterBackend]
     filterset_class = RecipeFilter
-    pagination_class = CustomPageNumberPagination
+    pagination_class = DefaultPageNumberPagination
     ordering_fields = ['id', 'name']
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
     ordering = ['-created_at']
@@ -244,7 +236,7 @@ class RecipeViewSet(RecipeActionMixin, viewsets.ModelViewSet):
 class SubscriptionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = SubscribedUserSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = CustomPageNumberPagination
+    pagination_class = DefaultPageNumberPagination
     http_method_names = ['get']
 
     def get_queryset(self):
@@ -260,7 +252,7 @@ class SubscriptionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 class SubscriptionViewEdit(APIView):
     permission_classes = [IsAuthenticated]
-    pagination_class = CustomPageNumberPagination
+    pagination_class = DefaultPageNumberPagination
 
     def post(self, request, pk=None):
         """POST /api/users/{id}/subscribe/"""

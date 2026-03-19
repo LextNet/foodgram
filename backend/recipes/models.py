@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from recipes.constants import (MAX_LENGTH_INGREDIENT, MAX_LENGTH_MEASURE,
@@ -48,7 +49,8 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE,
                                related_name='recipe_ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.PositiveIntegerField('Количество')
+    amount = models.PositiveIntegerField('Количество',
+                                         validators=[MinValueValidator(1)])
 
     class Meta:
         verbose_name = 'Количество ингредиента в рецепте'
@@ -79,25 +81,24 @@ class BaseUserRecipeModel(models.Model):
 
     class Meta():
         abstract = True
-
-
-class Favorite(BaseUserRecipeModel):
-
-    class Meta():
-        verbose_name = 'Избранное'
-        verbose_name_plural = 'Избранные рецепты'
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_favorite_user_recipe'
+                name='unique_%(class)s_recipe'
             )
         ]
         indexes = [
             models.Index(
-                fields=['user', 'recipe'],
-                name='idx_favorite_user_recipe'
+                fields=['user', 'recipe']
             )
         ]
+
+
+class Favorite(BaseUserRecipeModel):
+
+    class Meta(BaseUserRecipeModel.Meta):
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранные рецепты'
 
     def __str__(self):
         return (f'{self.user.username} → {self.recipe.name}')
@@ -105,21 +106,9 @@ class Favorite(BaseUserRecipeModel):
 
 class ShoppingCart(BaseUserRecipeModel):
 
-    class Meta():
+    class Meta(BaseUserRecipeModel.Meta):
         verbose_name = 'Покупка'
         verbose_name_plural = 'Список покупок'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='unique_shoppingcart_user_recipe'
-            )
-        ]
-        indexes = [
-            models.Index(
-                fields=['user', 'recipe'],
-                name='idx_shoppingcart_user_recipe'
-            )
-        ]
 
     def __str__(self):
         return (f'Список покупок {self.user.username}')
@@ -141,17 +130,11 @@ class Recipe(models.Model):
                                   related_name='recipes',
                                   verbose_name='Теги')
     cooking_time = models.PositiveIntegerField(
-        'Время приготовления (в минутах)')
+        'Время приготовления (в минутах)', validators=[MinValueValidator(1)])
 
     class Meta:
         verbose_name = 'Рецепт'
         verbose_name_plural = 'Рецепты'
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(cooking_time__gt=0),
-                name="cooking_time_positive",
-            ),
-        ]
 
     def __str__(self):
         return self.name
