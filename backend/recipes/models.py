@@ -4,16 +4,17 @@ from django.db import models
 
 from recipes.constants import (MAX_LENGTH_INGREDIENT, MAX_LENGTH_MEASURE,
                                MAX_LENGTH_RECIPE, MAX_LENGTH_SHORT_URL,
-                               MAX_LENGTH_TAG, MAX_LENGTH_URL)
+                               MAX_LENGTH_TAG, MAX_LENGTH_URL,
+                               MIN_COOKING_TIME, MIN_COUNT_INGREDIENT)
 
 User = get_user_model()
 
 
 class Tag(models.Model):
     name = models.CharField('Название', max_length=MAX_LENGTH_TAG,
-                            unique=True)
+                            unique=True, blank=False)
     slug = models.SlugField('Слаг', max_length=MAX_LENGTH_TAG, unique=True,
-                            blank=True, null=True)
+                            blank=False)
 
     class Meta:
         verbose_name = 'Тег'
@@ -25,9 +26,9 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField('Название',
+    name = models.CharField('Название', blank=False,
                             max_length=MAX_LENGTH_INGREDIENT, db_index=True)
-    measurement_unit = models.CharField('Единица измерения',
+    measurement_unit = models.CharField('Единица измерения', blank=False,
                                         max_length=MAX_LENGTH_MEASURE)
 
     class Meta:
@@ -49,8 +50,11 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey('Recipe', on_delete=models.CASCADE,
                                related_name='recipe_ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.PositiveIntegerField('Количество',
-                                         validators=[MinValueValidator(1)])
+    amount = models.PositiveIntegerField(
+        'Количество',
+        blank=False,
+        validators=[MinValueValidator(MIN_COUNT_INGREDIENT)]
+    )
 
     class Meta:
         verbose_name = 'Количество ингредиента в рецепте'
@@ -119,18 +123,21 @@ class Recipe(models.Model):
                                on_delete=models.CASCADE,
                                related_name='recipes',
                                verbose_name='Автор')
-    name = models.CharField('Название', max_length=MAX_LENGTH_RECIPE)
+    name = models.CharField('Название', max_length=MAX_LENGTH_RECIPE,
+                            blank=False)
     image = models.ImageField('Изображение', upload_to='recipes/',
                               null=True, blank=True)
-    text = models.TextField('Описание')
-    ingredients = models.ManyToManyField(Ingredient,
+    text = models.TextField('Описание', blank=False)
+    ingredients = models.ManyToManyField(Ingredient, blank=False,
                                          through='RecipeIngredient',
                                          verbose_name='Ингредиенты')
-    tags = models.ManyToManyField(Tag, blank=True,
+    tags = models.ManyToManyField(Tag, blank=False,
                                   related_name='recipes',
                                   verbose_name='Теги')
     cooking_time = models.PositiveIntegerField(
-        'Время приготовления (в минутах)', validators=[MinValueValidator(1)])
+        'Время приготовления (в минутах)', blank=False,
+        validators=[MinValueValidator(MIN_COOKING_TIME)]
+    )
 
     class Meta:
         verbose_name = 'Рецепт'

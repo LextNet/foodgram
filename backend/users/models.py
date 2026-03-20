@@ -18,12 +18,15 @@ class OverwriteStorage(FileSystemStorage):
 class UserProfile(AbstractUser):
     """Переопределённая модель пользователя."""
     username = models.CharField('Пользователь', max_length=MAX_LENGTH_USERNAME,
-                                unique=True,
+                                unique=True, blank=False,
                                 validators=[validate_username],)
-    first_name = models.CharField('Имя', max_length=MAX_LENGTH_FIO)
-    last_name = models.CharField('Фамилия', max_length=MAX_LENGTH_FIO)
+    first_name = models.CharField('Имя', max_length=MAX_LENGTH_FIO,
+                                  blank=False)
+    last_name = models.CharField('Фамилия', max_length=MAX_LENGTH_FIO,
+                                 blank=False)
     email = models.EmailField('Адрес электронной почты',
-                              max_length=MAX_LENGTH_EMAIL, unique=True)
+                              max_length=MAX_LENGTH_EMAIL, unique=True,
+                              blank=False)
     avatar = models.ImageField('Аватар', upload_to='users/', null=True,
                                blank=True, storage=OverwriteStorage())
 

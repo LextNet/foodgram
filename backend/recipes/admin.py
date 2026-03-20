@@ -1,8 +1,19 @@
 from django.contrib import admin
 
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 
 admin.site.empty_value_display = 'Не задано'
+
+
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    verbose_name = 'Ингредиент'
+    verbose_name_plural = 'Ингредиенты'
+    fields = ('ingredient', 'amount')
+    extra = 1
+    min_num = 1
+    validate_min = True
 
 
 class RecipesAdmin(admin.ModelAdmin):
@@ -13,6 +24,17 @@ class RecipesAdmin(admin.ModelAdmin):
     list_filter = ('tags',)
     readonly_fields = ('get_favorites_count',)
     filter_horizontal = ('tags', )
+
+    inlines = [RecipeIngredientInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('author', 'name', 'image', 'text', 'cooking_time')
+        }),
+        ('Теги', {
+            'fields': ('tags',),
+        }),
+    )
 
     @admin.display(description='В избранном?', boolean=True)
     def is_favorited(self, obj):
